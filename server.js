@@ -2,14 +2,45 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
+const fs = require('fs');
+const { isSmsConfigured } = require('./services/dosnetSms');
 
-// Load environment variables
-dotenv.config();
+// Load environment variables (.env required; .env.example fallback for local dev)
+const envPath = path.join(__dirname, '.env');
+const envExamplePath = path.join(__dirname, '.env.example');
+
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+  console.log('[Env] Loaded', envPath);
+} else if (fs.existsSync(envExamplePath)) {
+  dotenv.config({ path: envExamplePath });
+  console.warn('[Env] .env not found — loaded .env.example instead. Copy it to .env for production.');
+} else {
+  dotenv.config();
+  console.warn('[Env] No .env or .env.example found');
+}
 
 const app = express();
 
 // Middlewares
-app.use(cors());
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,https://alvaspragati.com,https://www.alvaspragati.com')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -35,4 +66,24 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  if (isSmsConfigured()) {
+    console.log('[DOSNET SMS] Configured — registration SMS will be sent');
+    console.log('[DOSNET SMS] API URL:', process.env.DOSNET_API_URL);
+    console.log('[DOSNET SMS] Username:', process.env.DOSNET_USERNAME);
+    console.log('[DOSNET SMS] Sender ID:', process.env.DOSNET_SENDERID);
+    console.log('[DOSNET SMS] Template ID:', process.env.DOSNET_TEMPLATE_ID);
+  } else {
+    console.warn('[DOSNET SMS] NOT configured — add DOSNET_* vars to .env file');
+    console.warn('[DOSNET SMS] Missing:', getMissingDosnetVars().join(', ') || 'unknown');
+  }
 });
+
+function getMissingDosnetVars() {
+  const required = [
+    'DOSNET_API_URL',
+    'DOSNET_API_KEY',
+    'DOSNET_USERNAME',
+    'DOSNET_SENDERID',
+  ];
+  return required.filter((key) => !process.env[key]);
+}

@@ -1,4 +1,6 @@
 const Candidate = require('../models/Candidate');
+const { getNextSerialNumber } = require('../utils/serialNumber');
+const { sendRegistrationSms } = require('../services/dosnetSms');
 
 // Register a new candidate
 exports.registerCandidate = async (req, res) => {
@@ -18,23 +20,16 @@ exports.registerCandidate = async (req, res) => {
       resumeLink,
     } = req.body;
 
-    // Check if candidate already exists by email
+    console.log('[Registration] New candidate request:', { email, phone, fullName });
+
     const existingCandidate = await Candidate.findOne({ email });
     if (existingCandidate) {
+      console.log('[Registration] Rejected — email already exists:', email);
       return res.status(400).json({ message: 'Candidate with this email already exists' });
     }
 
-    // Generate sequential serial number (e.g. 26AL000001)
-    let nextNum = 1;
-    const lastCandidate = await Candidate.findOne({}, { serialNumber: 1 }).sort({ serialNumber: -1 });
-    if (lastCandidate && lastCandidate.serialNumber) {
-      const match = lastCandidate.serialNumber.match(/^26AL(\d+)$/);
-      if (match) {
-        nextNum = parseInt(match[1], 10) + 1;
-      }
-    }
-    const paddedNum = String(nextNum).padStart(6, '0');
-    const serialNumber = `26AL${paddedNum}`;
+    const serialNumber = await getNextSerialNumber();
+    console.log('[Registration] Generated serial number:', serialNumber);
 
     const newCandidate = new Candidate({
       fullName,
@@ -53,13 +48,33 @@ exports.registerCandidate = async (req, res) => {
     });
 
     await newCandidate.save();
+    console.log('[Registration] Candidate saved successfully:', {
+      id: newCandidate._id,
+      email: newCandidate.email,
+      serialNumber: newCandidate.serialNumber,
+    });
+
+    console.log('[Registration] Calling DOSNET SMS API after successful registration...');
+    const smsResult = await sendRegistrationSms({
+      phone,
+      fullName,
+      serialNumber,
+    });
+
+    console.log('[Registration] DOSNET SMS API result:', {
+      sent: smsResult.sent,
+      skipped: smsResult.skipped,
+      error: smsResult.error || null,
+      variables: smsResult.variables || null,
+    });
 
     res.status(201).json({
       message: 'Candidate registered successfully',
-      candidate: newCandidate
+      candidate: newCandidate,
+      smsSent: smsResult.sent === true,
     });
   } catch (error) {
-    console.error('Error registering candidate:', error);
+    console.error('[Registration] Error:', error);
     res.status(500).json({ message: 'Server error during registration', error: error.message });
   }
 };
