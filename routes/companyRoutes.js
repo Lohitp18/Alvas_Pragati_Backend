@@ -8,4 +8,9 @@ const { validateCompanyRegistration, checkValidationErrors } = require('../middl
 // @access  Public
 router.post('/register', validateCompanyRegistration, checkValidationErrors, companyController.registerCompany);
 
+// @route   GET /api/companies/approved
+// @desc    Get all approved participating companies
+// @access  Public
+router.get('/approved', companyController.getApprovedCompanies);
+
 module.exports = router;

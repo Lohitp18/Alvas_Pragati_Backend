@@ -40,3 +40,17 @@ exports.registerCompany = async (req, res) => {
     res.status(500).json({ message: 'Server error during registration', error: error.message });
   }
 };
+
+// Get all approved companies (public)
+exports.getApprovedCompanies = async (req, res) => {
+  try {
+    const companies = await Company.find({ status: 'Approved' })
+      .select('companyName industry website')
+      .sort({ companyName: 1 });
+
+    res.status(200).json(companies);
+  } catch (error) {
+    console.error('Error fetching approved companies:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
