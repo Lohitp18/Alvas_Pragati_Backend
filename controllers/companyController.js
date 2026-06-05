@@ -45,7 +45,7 @@ exports.registerCompany = async (req, res) => {
 exports.getApprovedCompanies = async (req, res) => {
   try {
     const companies = await Company.find({ status: 'Approved' })
-      .select('companyName industry website')
+      .select('-executives -interviewProcess')
       .sort({ companyName: 1 });
 
     res.status(200).json(companies);
