@@ -14,6 +14,10 @@ exports.registerCompany = async (req, res) => {
       return res.status(400).json({ message: 'Company with this email already exists' });
     }
 
+    const filledOpenings = (openings || []).filter(
+      (op) => String(op?.vacancies ?? '').trim() !== ''
+    );
+
     const newCompany = new Company({
       companyName,
       contactPerson,
@@ -26,7 +30,7 @@ exports.registerCompany = async (req, res) => {
       accommodation: accommodation || {},
       transportation: transportation || {},
       interviewProcess: interviewProcess || {},
-      openings: openings || []
+      openings: filledOpenings
     });
 
     await newCompany.save();
@@ -45,7 +49,7 @@ exports.registerCompany = async (req, res) => {
 exports.getApprovedCompanies = async (req, res) => {
   try {
     const companies = await Company.find({ status: 'Approved' })
-      .select('-executives -interviewProcess')
+      .select('companyName industry openings')
       .sort({ companyName: 1 });
 
     res.status(200).json(companies);
