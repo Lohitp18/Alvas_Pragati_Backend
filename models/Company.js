@@ -56,6 +56,7 @@ const CompanySchema = new mongoose.Schema({
   },
   transportation: {
     transRequired: { type: String, default: 'No' },
+    ownTransport: { type: String, default: '' },
     fromLocation: String,
     toLocation: String,
     pickUpDate: String,

@@ -56,6 +56,7 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/alvas-praga
 app.use('/api/candidates', require('./routes/candidateRoutes'));
 app.use('/api/companies', require('./routes/companyRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/contact', require('./routes/contactRoutes'));
 
 // Basic Route for testing
 app.get('/', (req, res) => {
