@@ -18,6 +18,7 @@ exports.registerCandidate = async (req, res) => {
       skills,
       languagesKnown,
       resumeLink,
+      registrationData,
     } = req.body;
 
     console.log('[Registration] New candidate request:', { email, phone, fullName });
@@ -45,6 +46,7 @@ exports.registerCandidate = async (req, res) => {
       languagesKnown: Array.isArray(languagesKnown) ? languagesKnown : [],
       resumeLink,
       serialNumber,
+      registrationData: registrationData || {},
     });
 
     await newCandidate.save();

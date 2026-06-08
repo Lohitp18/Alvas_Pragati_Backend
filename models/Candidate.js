@@ -61,6 +61,10 @@ const CandidateSchema = new mongoose.Schema({
   serialNumber: {
     type: String,
     unique: true
+  },
+  registrationData: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   }
 }, { timestamps: true });
 
