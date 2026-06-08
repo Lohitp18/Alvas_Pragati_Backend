@@ -77,6 +77,35 @@ exports.deleteCompany = async (req, res) => {
   }
 };
 
+// Update company details
+exports.updateCompany = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const allowedFields = [
+      'companyName', 'contactPerson', 'email', 'phone', 'website',
+      'industry', 'requirements', 'executives', 'accommodation',
+      'transportation', 'interviewProcess', 'openings', 'status',
+    ];
+
+    const updates = {};
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    });
+
+    const company = await Company.findByIdAndUpdate(id, updates, { new: true, runValidators: true });
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found' });
+    }
+
+    res.status(200).json({ message: 'Company updated successfully', company });
+  } catch (error) {
+    console.error('Error updating company:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 // Update Company Status
 exports.updateCompanyStatus = async (req, res) => {
   try {

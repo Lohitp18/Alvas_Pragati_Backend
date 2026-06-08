@@ -32,6 +32,11 @@ router.delete('/companies/:id', adminController.deleteCompany);
 // @access  Public (in production, secure this with auth middleware)
 router.put('/candidates/:id/status', adminController.updateCandidateStatus);
 
+// @route   PUT /api/admin/companies/:id
+// @desc    Update a company's details
+// @access  Public (in production, secure this with auth middleware)
+router.put('/companies/:id', adminController.updateCompany);
+
 // @route   PUT /api/admin/companies/:id/status
 // @desc    Update a company's status
 // @access  Public (in production, secure this with auth middleware)
