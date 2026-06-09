@@ -86,6 +86,103 @@ function parseDosnetResponse(text) {
   }
 }
 
+let cachedServerPublicIp = null;
+let cachedServerPublicIpAt = 0;
+const SERVER_IP_CACHE_MS = 10 * 60 * 1000;
+
+function httpsGetText(url, timeoutMs = 8000) {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const req = https.get(
+      {
+        hostname: parsed.hostname,
+        port: parsed.port || 443,
+        path: `${parsed.pathname}${parsed.search}`,
+        method: 'GET',
+        headers: { 'User-Agent': 'AlvasPragati-Backend/1.0' },
+        timeout: timeoutMs,
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => resolve(data.trim()));
+      }
+    );
+    req.on('timeout', () => req.destroy(new Error('timeout')));
+    req.on('error', reject);
+  });
+}
+
+function httpGetText(hostname, path, headers = {}, timeoutMs = 3000) {
+  return new Promise((resolve, reject) => {
+    const http = require('http');
+    const req = http.get(
+      { hostname, port: 80, path, method: 'GET', headers, timeout: timeoutMs },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => resolve(data.trim()));
+      }
+    );
+    req.on('timeout', () => req.destroy(new Error('timeout')));
+    req.on('error', reject);
+  });
+}
+
+async function getServerPublicIp() {
+  const now = Date.now();
+  if (cachedServerPublicIp && now - cachedServerPublicIpAt < SERVER_IP_CACHE_MS) {
+    return cachedServerPublicIp;
+  }
+
+  const envIp = String(process.env.SERVER_PUBLIC_IP || process.env.DOSNET_WHITELIST_IP || '').trim();
+  if (envIp) {
+    cachedServerPublicIp = envIp;
+    cachedServerPublicIpAt = now;
+    return envIp;
+  }
+
+  const sources = [
+    {
+      name: 'Azure metadata',
+      fn: () =>
+        httpGetText(
+          '169.254.169.254',
+          '/metadata/instance/network/interface/0/ipv4/ipAddress/0/publicIpAddress?api-version=2021-02-01&format=text',
+          { Metadata: 'true' },
+          3000
+        ),
+    },
+    {
+      name: 'api.ipify.org',
+      fn: () => httpsGetText('https://api.ipify.org', 5000),
+    },
+    {
+      name: 'ifconfig.me',
+      fn: () => httpsGetText('https://ifconfig.me/ip', 5000),
+    },
+  ];
+
+  for (const source of sources) {
+    try {
+      const ip = await source.fn();
+      if (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) {
+        cachedServerPublicIp = ip;
+        cachedServerPublicIpAt = now;
+        return ip;
+      }
+    } catch {
+      // try next source
+    }
+  }
+
+  return null;
+}
+
 function httpsGet(url, timeoutMs = 30000) {
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
@@ -208,6 +305,16 @@ async function sendRegistrationSms({ phone, fullName, serialNumber }) {
   console.log('  Variable 2 {#numeric#} (year):', var2Year);
   console.log('  Variable 3 {#numeric#} (registration no):', var3RegNumber);
   console.log('[DOSNET SMS] Recipient mobile:', mobile);
+
+  const serverPublicIp = await getServerPublicIp();
+  if (serverPublicIp) {
+    console.log('[DOSNET SMS] Server outbound IP (whitelist this in DOSNET):', serverPublicIp);
+  } else {
+    console.warn(
+      '[DOSNET SMS] Server outbound IP: could not detect — set SERVER_PUBLIC_IP in .env or whitelist IP in Azure portal'
+    );
+  }
+
   console.log('[DOSNET SMS] Sender ID:', config.senderId);
   console.log('[DOSNET SMS] Template ID:', config.templateId);
   console.log('[DOSNET SMS] API Key:', config.apiKey);
@@ -263,6 +370,9 @@ async function sendRegistrationSms({ phone, fullName, serialNumber }) {
     if (cause.code || cause.message) {
       console.error('[DOSNET SMS] Error code:', cause.code || cause.message);
     }
+    if (serverPublicIp) {
+      console.error('[DOSNET SMS] Whitelist this server IP in DOSNET panel:', serverPublicIp);
+    }
     console.error(
       '[DOSNET SMS] Check: server outbound HTTPS to sms.dosnet.in, DNS, firewall, and DOSNET IP whitelist'
     );
@@ -271,6 +381,7 @@ async function sendRegistrationSms({ phone, fullName, serialNumber }) {
       sent: false,
       error: err.message,
       code: cause.code || err.code || null,
+      serverPublicIp: serverPublicIp || null,
     };
   }
 }
