@@ -1,3 +1,6 @@
+const https = require('https');
+const { URL } = require('url');
+
 /**
  * DOSNET DLT template variables (in order):
  * 1. {#alphanumeric#} → candidate name
@@ -75,6 +78,107 @@ function getMissingDosnetVars() {
   return missing;
 }
 
+function parseDosnetResponse(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function httpsGet(url, timeoutMs = 30000) {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const req = https.get(
+      {
+        hostname: parsed.hostname,
+        port: parsed.port || 443,
+        path: `${parsed.pathname}${parsed.search}`,
+        method: 'GET',
+        headers: {
+          'User-Agent': 'AlvasPragati-Backend/1.0',
+          Accept: 'application/json, text/plain, */*',
+        },
+        timeout: timeoutMs,
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          resolve({ status: res.statusCode || 0, text: data.trim() });
+        });
+      }
+    );
+
+    req.on('timeout', () => {
+      req.destroy(new Error('SMS API request timed out after 30s'));
+    });
+    req.on('error', reject);
+  });
+}
+
+async function callDosnetApi(url) {
+  const requestOptions = {
+    method: 'GET',
+    headers: {
+      'User-Agent': 'AlvasPragati-Backend/1.0',
+      Accept: 'application/json, text/plain, */*',
+    },
+  };
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    const res = await fetch(url, { ...requestOptions, signal: controller.signal });
+    clearTimeout(timer);
+    return { status: res.status, text: (await res.text()).trim() };
+  } catch (fetchErr) {
+    const cause = fetchErr.cause || {};
+    console.warn('[DOSNET SMS] fetch() failed:', fetchErr.message);
+    if (cause.message || cause.code) {
+      console.warn('[DOSNET SMS] fetch cause:', cause.code || cause.message);
+    }
+    console.warn('[DOSNET SMS] Retrying with Node https module...');
+    return httpsGet(url);
+  }
+}
+
+function evaluateDosnetResponse(status, text) {
+  const json = parseDosnetResponse(text);
+
+  if (json?.status === 'error') {
+    const message = json.message || text;
+    const ipBlocked = /ip\s*blocked/i.test(message);
+    return {
+      sent: false,
+      error: ipBlocked
+        ? `${message}. Ask DOSNET to whitelist your server public IP (${json.ipaddress || 'unknown'}).`
+        : message,
+      status,
+      ipBlocked,
+      ipAddress: json.ipaddress || null,
+      response: text,
+    };
+  }
+
+  const lower = text.toLowerCase();
+  const failed =
+    status < 200 ||
+    status >= 300 ||
+    lower.includes('error') ||
+    lower.includes('fail') ||
+    lower.includes('invalid') ||
+    lower.includes('denied');
+
+  if (failed) {
+    return { sent: false, error: text, status, response: text };
+  }
+
+  return { sent: true, response: text };
+}
+
 async function sendRegistrationSms({ phone, fullName, serialNumber }) {
   console.log('========================================');
   console.log('[DOSNET SMS] Registration SMS — starting');
@@ -128,26 +232,22 @@ async function sendRegistrationSms({ phone, fullName, serialNumber }) {
 
   try {
     const startedAt = Date.now();
-    const res = await fetch(url, { method: 'GET' });
-    const text = (await res.text()).trim();
+    const { status, text } = await callDosnetApi(url);
     const elapsed = Date.now() - startedAt;
 
     console.log('[DOSNET SMS] API response received in', `${elapsed}ms`);
-    console.log('[DOSNET SMS] HTTP status:', res.status);
+    console.log('[DOSNET SMS] HTTP status:', status);
     console.log('[DOSNET SMS] Response body:', text);
 
-    const lower = text.toLowerCase();
-    const failed =
-      !res.ok ||
-      lower.includes('error') ||
-      lower.includes('fail') ||
-      lower.includes('invalid') ||
-      lower.includes('denied');
+    const result = evaluateDosnetResponse(status, text);
 
-    if (failed) {
-      console.error('[DOSNET SMS] Send FAILED');
+    if (!result.sent) {
+      console.error('[DOSNET SMS] Send FAILED:', result.error);
+      if (result.ipBlocked) {
+        console.error('[DOSNET SMS] Action required: whitelist server IP in DOSNET SMS panel');
+      }
       console.log('========================================');
-      return { sent: false, error: text, status: res.status };
+      return result;
     }
 
     console.log('[DOSNET SMS] Send SUCCESS');
@@ -158,9 +258,20 @@ async function sendRegistrationSms({ phone, fullName, serialNumber }) {
       variables: { var1Name, var2Year, var3RegNumber },
     };
   } catch (err) {
+    const cause = err.cause || {};
     console.error('[DOSNET SMS] Request ERROR:', err.message);
+    if (cause.code || cause.message) {
+      console.error('[DOSNET SMS] Error code:', cause.code || cause.message);
+    }
+    console.error(
+      '[DOSNET SMS] Check: server outbound HTTPS to sms.dosnet.in, DNS, firewall, and DOSNET IP whitelist'
+    );
     console.log('========================================');
-    return { sent: false, error: err.message };
+    return {
+      sent: false,
+      error: err.message,
+      code: cause.code || err.code || null,
+    };
   }
 }
 

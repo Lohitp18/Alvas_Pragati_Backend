@@ -18,8 +18,8 @@ RUN npm prune --production
 # Stage 2: Production Runtime
 FROM node:20-alpine AS runner
 
-# Install tini for proper signal handling (PID 1)
-RUN apk add --no-cache tini
+# Install tini + CA certs for outbound HTTPS (DOSNET SMS API)
+RUN apk add --no-cache tini ca-certificates
 
 ENV NODE_ENV=production
 ENV PORT=5000
