@@ -14,13 +14,6 @@ services:
       - MONGO_URI=${MONGO_URI}
       - JWT_SECRET=${JWT_SECRET}
       - CORS_ORIGIN=${CORS_ORIGIN:-https://alvaspragati.com,https://www.alvaspragati.com,http://localhost:3000}
-      - PRAGATI_EVENT_YEAR=${PRAGATI_EVENT_YEAR:-2026}
-      - DOSNET_API_URL=${DOSNET_API_URL}
-      - DOSNET_API_KEY=${DOSNET_API_KEY}
-      - DOSNET_USERNAME=${DOSNET_USERNAME}
-      - DOSNET_SENDERID=${DOSNET_SENDERID}
-      - DOSNET_ROUTE=${DOSNET_ROUTE:-TRANS}
-      - DOSNET_TEMPLATE_ID=${DOSNET_TEMPLATE_ID}
     env_file:
       - .env
     restart: unless-stopped

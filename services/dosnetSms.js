@@ -40,13 +40,39 @@ function buildRegistrationMessage({ var1Name, var2Year, var3RegNumber }) {
   );
 }
 
+function getDosnetApiKey() {
+  return String(
+    process.env.DOSNET_API_KEY ||
+      process.env.DOSNET_APIKEY ||
+      process.env.DOSNET_KEY ||
+      ''
+  ).trim();
+}
+
+function getDosnetConfig() {
+  return {
+    apiUrl: String(process.env.DOSNET_API_URL || '').trim(),
+    apiKey: getDosnetApiKey(),
+    username: String(process.env.DOSNET_USERNAME || '').trim(),
+    senderId: String(process.env.DOSNET_SENDERID || '').trim(),
+    route: String(process.env.DOSNET_ROUTE || 'TRANS').trim(),
+    templateId: String(process.env.DOSNET_TEMPLATE_ID || '').trim(),
+  };
+}
+
 function isSmsConfigured() {
-  return Boolean(
-    process.env.DOSNET_API_URL &&
-      process.env.DOSNET_API_KEY &&
-      process.env.DOSNET_USERNAME &&
-      process.env.DOSNET_SENDERID
-  );
+  const { apiUrl, apiKey, username, senderId } = getDosnetConfig();
+  return Boolean(apiUrl && apiKey && username && senderId);
+}
+
+function getMissingDosnetVars() {
+  const config = getDosnetConfig();
+  const missing = [];
+  if (!config.apiUrl) missing.push('DOSNET_API_URL');
+  if (!config.apiKey) missing.push('DOSNET_API_KEY');
+  if (!config.username) missing.push('DOSNET_USERNAME');
+  if (!config.senderId) missing.push('DOSNET_SENDERID');
+  return missing;
 }
 
 async function sendRegistrationSms({ phone, fullName, serialNumber }) {
@@ -54,10 +80,10 @@ async function sendRegistrationSms({ phone, fullName, serialNumber }) {
   console.log('[DOSNET SMS] Registration SMS — starting');
   console.log('========================================');
 
+  const config = getDosnetConfig();
+
   if (!isSmsConfigured()) {
-    const missing = ['DOSNET_API_URL', 'DOSNET_API_KEY', 'DOSNET_USERNAME', 'DOSNET_SENDERID'].filter(
-      (k) => !process.env[k]
-    );
+    const missing = getMissingDosnetVars();
     console.warn('[DOSNET SMS] Skipped — DOSNET env vars not configured');
     console.warn('[DOSNET SMS] Missing variables:', missing.join(', ') || 'unknown');
     console.warn('[DOSNET SMS] Create Alvas-pragati-backend/.env from .env.example and restart the server');
@@ -78,28 +104,27 @@ async function sendRegistrationSms({ phone, fullName, serialNumber }) {
   console.log('  Variable 2 {#numeric#} (year):', var2Year);
   console.log('  Variable 3 {#numeric#} (registration no):', var3RegNumber);
   console.log('[DOSNET SMS] Recipient mobile:', mobile);
-  console.log('[DOSNET SMS] Sender ID:', process.env.DOSNET_SENDERID);
-  console.log('[DOSNET SMS] Template ID:', process.env.DOSNET_TEMPLATE_ID);
+  console.log('[DOSNET SMS] Sender ID:', config.senderId);
+  console.log('[DOSNET SMS] Template ID:', config.templateId);
+  console.log('[DOSNET SMS] API Key:', config.apiKey);
   console.log('[DOSNET SMS] Built message:', message);
 
-  const baseUrl = process.env.DOSNET_API_URL.replace(/\/$/, '');
+  const baseUrl = config.apiUrl.replace(/\/$/, '');
   const params = new URLSearchParams({
-    username: process.env.DOSNET_USERNAME,
-    apikey: process.env.DOSNET_API_KEY,
-    apirequest: "Text",
-    sender: process.env.DOSNET_SENDERID,
+    username: config.username,
+    apikey: config.apiKey,
+    apirequest: 'Text',
+    sender: config.senderId,
     mobile,
     message,
-    route: process.env.DOSNET_ROUTE || 'TRANS',
-     TemplateID: process.env.DOSNET_TEMPLATE_ID || '',
-    format: "JSON"
+    route: config.route,
+    TemplateID: config.templateId,
+    format: 'JSON',
   });
-  console.log("process.env.DOSNET_API_KEY",process.env.DOSNET_API_KEY)
   const url = `${baseUrl}?${params.toString()}`;
-  const safeLogUrl = url.replace(process.env.DOSNET_API_KEY);
 
   console.log('[DOSNET SMS] Calling API...');
-  console.log('[DOSNET SMS] Request URL:', safeLogUrl);
+  console.log('[DOSNET SMS] Request URL:', url);
 
   try {
     const startedAt = Date.now();
@@ -145,4 +170,6 @@ module.exports = {
   buildRegistrationMessage,
   normalizeIndianMobile,
   isSmsConfigured,
+  getDosnetConfig,
+  getMissingDosnetVars,
 };

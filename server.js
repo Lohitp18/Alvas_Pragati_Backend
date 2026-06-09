@@ -1,12 +1,8 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
-const { isSmsConfigured } = require('./services/dosnetSms');
+const dotenv = require('dotenv');
 
-// Load environment variables (.env required; .env.example fallback for local dev)
+// Load environment variables before any service reads process.env
 const envPath = path.join(__dirname, '.env');
 const envExamplePath = path.join(__dirname, '.env.example');
 
@@ -20,6 +16,11 @@ if (fs.existsSync(envPath)) {
   dotenv.config();
   console.warn('[Env] No .env or .env.example found');
 }
+
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const { isSmsConfigured, getDosnetConfig, getMissingDosnetVars } = require('./services/dosnetSms');
 
 const app = express();
 
@@ -68,23 +69,15 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   if (isSmsConfigured()) {
+    const sms = getDosnetConfig();
     console.log('[DOSNET SMS] Configured — registration SMS will be sent');
-    console.log('[DOSNET SMS] API URL:', process.env.DOSNET_API_URL);
-    console.log('[DOSNET SMS] Username:', process.env.DOSNET_USERNAME);
-    console.log('[DOSNET SMS] Sender ID:', process.env.DOSNET_SENDERID);
-    console.log('[DOSNET SMS] Template ID:', process.env.DOSNET_TEMPLATE_ID);
+    console.log('[DOSNET SMS] API URL:', sms.apiUrl);
+    console.log('[DOSNET SMS] Username:', sms.username);
+    console.log('[DOSNET SMS] API Key:', sms.apiKey);
+    console.log('[DOSNET SMS] Sender ID:', sms.senderId);
+    console.log('[DOSNET SMS] Template ID:', sms.templateId);
   } else {
     console.warn('[DOSNET SMS] NOT configured — add DOSNET_* vars to .env file');
     console.warn('[DOSNET SMS] Missing:', getMissingDosnetVars().join(', ') || 'unknown');
   }
 });
-
-function getMissingDosnetVars() {
-  const required = [
-    'DOSNET_API_URL',
-    'DOSNET_API_KEY',
-    'DOSNET_USERNAME',
-    'DOSNET_SENDERID',
-  ];
-  return required.filter((key) => !process.env[key]);
-}
