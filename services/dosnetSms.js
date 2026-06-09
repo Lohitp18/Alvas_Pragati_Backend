@@ -94,9 +94,9 @@ async function sendRegistrationSms({ phone, fullName, serialNumber }) {
      TemplateID: process.env.DOSNET_TEMPLATE_ID || '',
     format: "JSON"
   });
-
+  console.log("process.env.DOSNET_API_KEY",process.env.DOSNET_API_KEY)
   const url = `${baseUrl}?${params.toString()}`;
-  const safeLogUrl = url.replace(process.env.DOSNET_API_KEY, '***');
+  const safeLogUrl = url.replace(process.env.DOSNET_API_KEY);
 
   console.log('[DOSNET SMS] Calling API...');
   console.log('[DOSNET SMS] Request URL:', safeLogUrl);
