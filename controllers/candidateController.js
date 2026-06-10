@@ -68,25 +68,28 @@ exports.registerCandidate = async (req, res) => {
       serialNumber: newCandidate.serialNumber,
     });
 
-    console.log('[Registration] Calling DOSNET SMS API after successful registration...');
-    const smsResult = await sendRegistrationSms({
-      phone,
-      fullName,
-      serialNumber,
-    });
-
-    console.log('[Registration] DOSNET SMS API result:', {
-      sent: smsResult.sent,
-      skipped: smsResult.skipped,
-      error: smsResult.error || null,
-      variables: smsResult.variables || null,
-    });
-
     res.status(201).json({
       message: 'Candidate registered successfully',
       candidate: newCandidate,
-      smsSent: smsResult.sent === true,
     });
+
+    // SMS runs in the background so registration responds immediately.
+    sendRegistrationSms({
+      phone,
+      fullName,
+      serialNumber: newCandidate.serialNumber,
+    })
+      .then((smsResult) => {
+        console.log('[Registration] Background DOSNET SMS result:', {
+          sent: smsResult.sent,
+          skipped: smsResult.skipped,
+          error: smsResult.error || null,
+          variables: smsResult.variables || null,
+        });
+      })
+      .catch((err) => {
+        console.error('[Registration] Background DOSNET SMS error:', err.message);
+      });
   } catch (error) {
     console.error('[Registration] Error:', error);
     res.status(500).json({ message: 'Server error during registration', error: error.message });

@@ -98,6 +98,12 @@ exports.updateCompany = async (req, res) => {
     if (Array.isArray(updates.openings)) {
       updates.openings = updates.openings.map((op) => normalizeOpeningSpecialization(op));
     }
+    if (updates.website !== undefined) {
+      updates.website = String(updates.website || '').trim();
+    }
+    if (updates.requirements !== undefined) {
+      updates.requirements = String(updates.requirements || '').trim();
+    }
 
     const company = await Company.findByIdAndUpdate(id, updates, { new: true, runValidators: true });
     if (!company) {

@@ -183,7 +183,7 @@ async function getServerPublicIp() {
   return null;
 }
 
-function httpsGet(url, timeoutMs = 30000) {
+function httpsGet(url, timeoutMs = 12000) {
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
     const req = https.get(
@@ -210,7 +210,7 @@ function httpsGet(url, timeoutMs = 30000) {
     );
 
     req.on('timeout', () => {
-      req.destroy(new Error('SMS API request timed out after 30s'));
+      req.destroy(new Error('SMS API request timed out after 12s'));
     });
     req.on('error', reject);
   });
@@ -227,7 +227,7 @@ async function callDosnetApi(url) {
 
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30000);
+    const timer = setTimeout(() => controller.abort(), 12000);
     const res = await fetch(url, { ...requestOptions, signal: controller.signal });
     clearTimeout(timer);
     return { status: res.status, text: (await res.text()).trim() };
@@ -306,14 +306,18 @@ async function sendRegistrationSms({ phone, fullName, serialNumber }) {
   console.log('  Variable 3 {#numeric#} (registration no):', var3RegNumber);
   console.log('[DOSNET SMS] Recipient mobile:', mobile);
 
-  const serverPublicIp = await getServerPublicIp();
-  if (serverPublicIp) {
-    console.log('[DOSNET SMS] Server outbound IP (whitelist this in DOSNET):', serverPublicIp);
-  } else {
-    console.warn(
-      '[DOSNET SMS] Server outbound IP: could not detect — set SERVER_PUBLIC_IP in .env or whitelist IP in Azure portal'
-    );
-  }
+  // Do not block the SMS request on outbound IP detection (can add 10+ seconds).
+  getServerPublicIp()
+    .then((serverPublicIp) => {
+      if (serverPublicIp) {
+        console.log('[DOSNET SMS] Server outbound IP (whitelist this in DOSNET):', serverPublicIp);
+      } else {
+        console.warn(
+          '[DOSNET SMS] Server outbound IP: could not detect — set SERVER_PUBLIC_IP in .env or whitelist IP in Azure portal'
+        );
+      }
+    })
+    .catch(() => {});
 
   console.log('[DOSNET SMS] Sender ID:', config.senderId);
   console.log('[DOSNET SMS] Template ID:', config.templateId);
@@ -370,9 +374,13 @@ async function sendRegistrationSms({ phone, fullName, serialNumber }) {
     if (cause.code || cause.message) {
       console.error('[DOSNET SMS] Error code:', cause.code || cause.message);
     }
-    if (serverPublicIp) {
-      console.error('[DOSNET SMS] Whitelist this server IP in DOSNET panel:', serverPublicIp);
-    }
+    getServerPublicIp()
+      .then((serverPublicIp) => {
+        if (serverPublicIp) {
+          console.error('[DOSNET SMS] Whitelist this server IP in DOSNET panel:', serverPublicIp);
+        }
+      })
+      .catch(() => {});
     console.error(
       '[DOSNET SMS] Check: server outbound HTTPS to sms.dosnet.in, DNS, firewall, and DOSNET IP whitelist'
     );
@@ -381,7 +389,6 @@ async function sendRegistrationSms({ phone, fullName, serialNumber }) {
       sent: false,
       error: err.message,
       code: cause.code || err.code || null,
-      serverPublicIp: serverPublicIp || null,
     };
   }
 }

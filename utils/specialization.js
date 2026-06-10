@@ -34,15 +34,16 @@ exports.resolveCandidateStream = (registrationData = {}, body = {}) => {
 };
 
 exports.normalizeOpeningSpecialization = (opening = {}) => {
+  const typedSpecialization = String(opening.specialization || '').trim();
   const specialization = formatSpecializationValue(
     opening.specialization,
     opening.specializationOther
-  );
+  ) || typedSpecialization;
 
   return {
     ...opening,
     specialization,
     specializationOther: opening.specializationOther || '',
-    stream: opening.stream || specialization || '',
+    stream: String(opening.stream || specialization || '').trim(),
   };
 };
