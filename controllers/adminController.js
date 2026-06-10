@@ -1,5 +1,6 @@
 const Candidate = require('../models/Candidate');
 const Company = require('../models/Company');
+const { normalizeOpeningSpecialization } = require('../utils/specialization');
 const AdminCredential = require('../models/AdminCredential');
 
 // Admin Login
@@ -93,6 +94,10 @@ exports.updateCompany = async (req, res) => {
         updates[field] = req.body[field];
       }
     });
+
+    if (Array.isArray(updates.openings)) {
+      updates.openings = updates.openings.map((op) => normalizeOpeningSpecialization(op));
+    }
 
     const company = await Company.findByIdAndUpdate(id, updates, { new: true, runValidators: true });
     if (!company) {

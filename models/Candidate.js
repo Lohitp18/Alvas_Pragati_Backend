@@ -41,6 +41,18 @@ const CandidateSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  taluk: {
+    type: String,
+    default: ''
+  },
+  stream: {
+    type: String,
+    default: ''
+  },
+  specialization: {
+    type: String,
+    default: ''
+  },
   skills: {
     type: [String],
     default: []

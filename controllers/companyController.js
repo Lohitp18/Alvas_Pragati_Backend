@@ -1,4 +1,5 @@
 const Company = require('../models/Company');
+const { normalizeOpeningSpecialization } = require('../utils/specialization');
 
 // Register a new company
 exports.registerCompany = async (req, res) => {
@@ -14,9 +15,9 @@ exports.registerCompany = async (req, res) => {
       return res.status(400).json({ message: 'Company with this email already exists' });
     }
 
-    const filledOpenings = (openings || []).filter(
-      (op) => String(op?.vacancies ?? '').trim() !== ''
-    );
+    const filledOpenings = (openings || [])
+      .filter((op) => String(op?.vacancies ?? '').trim() !== '')
+      .map((op) => normalizeOpeningSpecialization(op));
 
     const newCompany = new Company({
       companyName,

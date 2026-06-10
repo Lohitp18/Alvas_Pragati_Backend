@@ -1,6 +1,10 @@
 const Candidate = require('../models/Candidate');
 const { getNextSerialNumber } = require('../utils/serialNumber');
 const { sendRegistrationSms } = require('../services/dosnetSms');
+const {
+  resolveCandidateSpecialization,
+  resolveCandidateStream,
+} = require('../utils/specialization');
 
 // Register a new candidate
 exports.registerCandidate = async (req, res) => {
@@ -19,6 +23,9 @@ exports.registerCandidate = async (req, res) => {
       languagesKnown,
       resumeLink,
       registrationData,
+      specialization,
+      stream,
+      taluk,
     } = req.body;
 
     console.log('[Registration] New candidate request:', { email, phone, fullName });
@@ -32,6 +39,8 @@ exports.registerCandidate = async (req, res) => {
     const serialNumber = await getNextSerialNumber();
     console.log('[Registration] Generated serial number:', serialNumber);
 
+    const registrationPayload = registrationData || {};
+
     const newCandidate = new Candidate({
       fullName,
       email,
@@ -42,11 +51,14 @@ exports.registerCandidate = async (req, res) => {
       graduationYear,
       state: state || '',
       district: district || '',
+      taluk: taluk || registrationPayload.taluk || '',
+      stream: resolveCandidateStream(registrationPayload, { stream }),
+      specialization: resolveCandidateSpecialization(registrationPayload, { specialization }),
       skills: Array.isArray(skills) ? skills : [],
       languagesKnown: Array.isArray(languagesKnown) ? languagesKnown : [],
       resumeLink,
       serialNumber,
-      registrationData: registrationData || {},
+      registrationData: registrationPayload,
     });
 
     await newCandidate.save();
