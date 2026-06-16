@@ -69,6 +69,8 @@ const CompanySchema = new mongoose.Schema({
     additionalNotes: String,
     onlineExam: { type: String, default: 'No' },
     numComputers: String,
+    numHeadphones: String,
+    numWebcams: String,
     writtenExam: { type: String, default: 'No' },
     seatingCapacity: String,
     groupDiscussion: { type: String, default: 'No' },
