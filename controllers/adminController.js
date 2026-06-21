@@ -86,6 +86,7 @@ exports.updateCompany = async (req, res) => {
       'companyName', 'contactPerson', 'email', 'phone', 'website',
       'industry', 'requirements', 'executives', 'accommodation',
       'transportation', 'interviewProcess', 'openings', 'status',
+      'shortlistedCount', 'selectedCount', 'shortlistedPdf', 'selectedPdf',
     ];
 
     const updates = {};
@@ -158,5 +159,40 @@ exports.updateCandidateStatus = async (req, res) => {
   } catch (error) {
     console.error('Error updating candidate status:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Upload PDF file from base64 data
+exports.uploadPdf = async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const { base64Data, fileName } = req.body;
+    if (!base64Data) {
+      return res.status(400).json({ message: 'No file data provided' });
+    }
+
+    const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      return res.status(400).json({ message: 'Invalid base64 string' });
+    }
+
+    const fileBuffer = Buffer.from(matches[2], 'base64');
+    const uploadDir = path.join(__dirname, '../public/uploads');
+
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const safeFileName = `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
+    const filePath = path.join(uploadDir, safeFileName);
+
+    fs.writeFileSync(filePath, fileBuffer);
+
+    const fileUrl = `/uploads/${safeFileName}`;
+    res.status(200).json({ fileUrl });
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ message: 'File upload failed', error: error.message });
   }
 };

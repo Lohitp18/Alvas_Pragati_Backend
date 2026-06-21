@@ -42,4 +42,9 @@ router.put('/companies/:id', adminController.updateCompany);
 // @access  Public (in production, secure this with auth middleware)
 router.put('/companies/:id/status', adminController.updateCompanyStatus);
 
+// @route   POST /api/admin/upload-pdf
+// @desc    Upload a PDF file as base64
+// @access  Public
+router.post('/upload-pdf', adminController.uploadPdf);
+
 module.exports = router;

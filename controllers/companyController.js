@@ -16,8 +16,18 @@ exports.registerCompany = async (req, res) => {
     }
 
     const filledOpenings = (openings || [])
-      .filter((op) => String(op?.vacancies ?? '').trim() !== '')
-      .map((op) => normalizeOpeningSpecialization(op));
+      .filter((op) => String(op?.vacancies ?? '').trim() !== '');
+
+    for (let i = 0; i < filledOpenings.length; i += 1) {
+      const op = filledOpenings[i];
+      if (!String(op?.fromCTC ?? '').trim() || !String(op?.toCTC ?? '').trim()) {
+        return res.status(400).json({
+          message: `Opening ${i + 1}: Vacancies, From CTC, and To CTC are required.`,
+        });
+      }
+    }
+
+    const normalizedOpenings = filledOpenings.map((op) => normalizeOpeningSpecialization(op));
 
     const newCompany = new Company({
       companyName,
@@ -31,7 +41,7 @@ exports.registerCompany = async (req, res) => {
       accommodation: accommodation || {},
       transportation: transportation || {},
       interviewProcess: interviewProcess || {},
-      openings: filledOpenings
+      openings: normalizedOpenings
     });
 
     await newCompany.save();

@@ -92,7 +92,23 @@ const CompanySchema = new mongoose.Schema({
     jobDescription: String,
     expFrom: String,
     expTo: String
-  }]
+  }],
+  shortlistedCount: {
+    type: Number,
+    default: 0
+  },
+  selectedCount: {
+    type: Number,
+    default: 0
+  },
+  shortlistedPdf: {
+    type: String,
+    default: ''
+  },
+  selectedPdf: {
+    type: String,
+    default: ''
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Company', CompanySchema);
