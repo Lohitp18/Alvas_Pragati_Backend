@@ -47,4 +47,12 @@ router.put('/companies/:id/status', adminController.updateCompanyStatus);
 // @access  Public
 router.post('/upload-pdf', adminController.uploadPdf);
 
+// Credentials management
+router.get('/credentials', adminController.getAllCredentials);
+router.post('/credentials', adminController.createCredential);
+router.delete('/credentials/:id', adminController.deleteCredential);
+
+// Audit logs
+router.get('/audit-logs', adminController.getAuditLogs);
+
 module.exports = router;

@@ -9,6 +9,19 @@ const adminCredentialSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true
+  },
+  name: {
+    type: String,
+    default: ''
+  },
+  email: {
+    type: String,
+    default: ''
+  },
+  role: {
+    type: String,
+    enum: ['super admin', 'sector head'],
+    default: 'super admin'
   }
 }, { collection: 'admin_credential' });
 

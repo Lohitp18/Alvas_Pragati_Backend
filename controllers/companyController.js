@@ -5,7 +5,7 @@ const { normalizeOpeningSpecialization } = require('../utils/specialization');
 exports.registerCompany = async (req, res) => {
   try {
     const { 
-      companyName, contactPerson, email, phone, website, industry, requirements,
+      companyName, contactPerson, designation, gender, countryCode, email, phone, website, industry, requirements,
       executives, accommodation, transportation, interviewProcess, openings
     } = req.body;
 
@@ -32,6 +32,9 @@ exports.registerCompany = async (req, res) => {
     const newCompany = new Company({
       companyName,
       contactPerson,
+      designation: designation || '',
+      gender: gender || '',
+      countryCode: countryCode || '+91',
       email,
       phone,
       website: String(website || '').trim(),

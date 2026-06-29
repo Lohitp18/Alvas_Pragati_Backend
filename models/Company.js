@@ -11,6 +11,18 @@ const CompanySchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  designation: {
+    type: String,
+    default: ''
+  },
+  gender: {
+    type: String,
+    default: ''
+  },
+  countryCode: {
+    type: String,
+    default: '+91'
+  },
   email: {
     type: String,
     required: true,

@@ -4,12 +4,15 @@ const { normalizeOpeningSpecialization } = require('../utils/specialization');
 const AdminCredential = require('../models/AdminCredential');
 
 // Admin Login
+// Admin Login
 exports.adminLogin = async (req, res) => {
   try {
     const { username, password } = req.body;
     
-    // Find admin by username
-    const admin = await AdminCredential.findOne({ username });
+    // Find admin by username OR email
+    const admin = await AdminCredential.findOne({
+      $or: [{ username }, { email: username }]
+    });
     
     if (!admin) {
       return res.status(401).json({ message: 'Invalid username or password' });
@@ -20,11 +23,30 @@ exports.adminLogin = async (req, res) => {
       return res.status(401).json({ message: 'Invalid username or password' });
     }
     
-    // If login successful, return success message (can also generate/return JWT here if needed)
+    // Log audit log
+    try {
+      const AuditLog = require('../models/AuditLog');
+      await AuditLog.create({
+        username: admin.username,
+        name: admin.name || admin.username,
+        email: admin.email || '',
+        role: admin.role || 'super admin',
+        action: 'Logged In',
+        ipAddress: req.ip || req.headers['x-forwarded-for'] || '',
+        userAgent: req.headers['user-agent'] || ''
+      });
+    } catch (auditErr) {
+      console.error('Failed to write audit log:', auditErr);
+    }
+    
+    // If login successful, return success message
     res.status(200).json({ 
       message: 'Login successful', 
       success: true,
-      username: admin.username 
+      username: admin.username,
+      name: admin.name || admin.username,
+      email: admin.email || '',
+      role: admin.role || 'super admin'
     });
   } catch (error) {
     console.error('Error during admin login:', error);
@@ -83,7 +105,7 @@ exports.updateCompany = async (req, res) => {
   try {
     const { id } = req.params;
     const allowedFields = [
-      'companyName', 'contactPerson', 'email', 'phone', 'website',
+      'companyName', 'contactPerson', 'designation', 'gender', 'countryCode', 'email', 'phone', 'website',
       'industry', 'requirements', 'executives', 'accommodation',
       'transportation', 'interviewProcess', 'openings', 'status',
       'shortlistedCount', 'selectedCount', 'shortlistedPdf', 'selectedPdf',
@@ -194,5 +216,80 @@ exports.uploadPdf = async (req, res) => {
   } catch (error) {
     console.error('Error uploading file:', error);
     res.status(500).json({ message: 'File upload failed', error: error.message });
+  }
+};
+
+// Get all credentials
+exports.getAllCredentials = async (req, res) => {
+  try {
+    const credentials = await AdminCredential.find({}, { password: 0 }).sort({ createdAt: -1 });
+    res.status(200).json(credentials);
+  } catch (error) {
+    console.error('Error fetching credentials:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Create new credential
+exports.createCredential = async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+    
+    if (!email || !password || !role) {
+      return res.status(400).json({ message: 'Email, password and role are required' });
+    }
+    
+    // Check if username/email already exists
+    const existing = await AdminCredential.findOne({
+      $or: [{ username: email }, { email }]
+    });
+    if (existing) {
+      return res.status(400).json({ message: 'Email/Username already exists' });
+    }
+    
+    const newCred = await AdminCredential.create({
+      username: email,
+      email: email,
+      password: password,
+      name: name || '',
+      role: role
+    });
+    
+    res.status(201).json({
+      message: 'Credential created successfully',
+      credential: {
+        _id: newCred._id,
+        name: newCred.name,
+        email: newCred.email,
+        role: newCred.role
+      }
+    });
+  } catch (error) {
+    console.error('Error creating credential:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Delete credential
+exports.deleteCredential = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await AdminCredential.findByIdAndDelete(id);
+    res.status(200).json({ message: 'Credential deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting credential:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Get audit logs
+exports.getAuditLogs = async (req, res) => {
+  try {
+    const AuditLog = require('../models/AuditLog');
+    const logs = await AuditLog.find().sort({ timestamp: -1 });
+    res.status(200).json(logs);
+  } catch (error) {
+    console.error('Error fetching audit logs:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
