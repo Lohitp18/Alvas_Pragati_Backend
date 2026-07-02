@@ -22,6 +22,10 @@ const adminCredentialSchema = new mongoose.Schema({
     type: String,
     enum: ['super admin', 'sector head'],
     default: 'super admin'
+  },
+  allowedTabs: {
+    type: [String],
+    default: []
   }
 }, { collection: 'admin_credential' });
 

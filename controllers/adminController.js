@@ -46,7 +46,8 @@ exports.adminLogin = async (req, res) => {
       username: admin.username,
       name: admin.name || admin.username,
       email: admin.email || '',
-      role: admin.role || 'super admin'
+      role: admin.role || 'super admin',
+      allowedTabs: admin.allowedTabs || []
     });
   } catch (error) {
     console.error('Error during admin login:', error);
@@ -233,7 +234,7 @@ exports.getAllCredentials = async (req, res) => {
 // Create new credential
 exports.createCredential = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, allowedTabs } = req.body;
     
     if (!email || !password || !role) {
       return res.status(400).json({ message: 'Email, password and role are required' });
@@ -252,7 +253,8 @@ exports.createCredential = async (req, res) => {
       email: email,
       password: password,
       name: name || '',
-      role: role
+      role: role,
+      allowedTabs: allowedTabs || []
     });
     
     res.status(201).json({
@@ -261,7 +263,8 @@ exports.createCredential = async (req, res) => {
         _id: newCred._id,
         name: newCred.name,
         email: newCred.email,
-        role: newCred.role
+        role: newCred.role,
+        allowedTabs: newCred.allowedTabs || []
       }
     });
   } catch (error) {
