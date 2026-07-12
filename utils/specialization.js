@@ -8,13 +8,24 @@ function resolveQualSectionSpecialization(section = {}) {
   if (section.specialization) {
     return formatSpecializationValue(section.specialization, section.specializationOther);
   }
+  if (section.stream === 'Other' || section.stream === 'other') {
+    return String(section.streamOther || '').trim();
+  }
   return String(section.stream || '').trim();
 }
 
 exports.formatSpecializationValue = formatSpecializationValue;
 
 exports.resolveCandidateSpecialization = (registrationData = {}, body = {}) => {
-  if (body.specialization) return String(body.specialization).trim();
+  if (body.specialization) {
+    if (body.specialization === 'Other' || body.specialization === 'other') {
+      const q = registrationData.highestQualification;
+      if (q && registrationData[q] && registrationData[q].specializationOther) {
+        return String(registrationData[q].specializationOther).trim();
+      }
+    }
+    return String(body.specialization).trim();
+  }
 
   const qualKey = registrationData.highestQualification;
   if (!qualKey || qualKey === 'other') return '';
@@ -24,12 +35,23 @@ exports.resolveCandidateSpecialization = (registrationData = {}, body = {}) => {
 };
 
 exports.resolveCandidateStream = (registrationData = {}, body = {}) => {
-  if (body.stream) return String(body.stream).trim();
+  if (body.stream) {
+    if (body.stream === 'Other' || body.stream === 'other') {
+      const q = registrationData.highestQualification;
+      if (q && registrationData[q] && registrationData[q].streamOther) {
+        return String(registrationData[q].streamOther).trim();
+      }
+    }
+    return String(body.stream).trim();
+  }
 
   const qualKey = registrationData.highestQualification;
   if (!qualKey || qualKey === 'other') return '';
 
   const section = registrationData[qualKey] || {};
+  if (section.stream === 'Other' || section.stream === 'other') {
+    return String(section.streamOther || '').trim();
+  }
   return String(section.stream || '').trim();
 };
 

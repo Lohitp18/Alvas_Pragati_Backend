@@ -55,4 +55,20 @@ router.delete('/credentials/:id', adminController.deleteCredential);
 // Audit logs
 router.get('/audit-logs', adminController.getAuditLogs);
 
+// On Spot Registration routes
+const onSpotController = require('../controllers/onSpotController');
+router.post('/onspot/login', onSpotController.onSpotCompanyLogin);
+router.get('/onspot/query-student/:uniqueId', onSpotController.queryStudentByUniqueId);
+router.post('/onspot/register', onSpotController.registerOnSpotStudent);
+router.get('/onspot/company/:companyId', onSpotController.getCompanyOnSpotStudents);
+router.put('/onspot/:id', onSpotController.updateOnSpotStudent);
+router.delete('/onspot/:id', onSpotController.deleteOnSpotStudent);
+router.get('/onspot/summary', onSpotController.getOnSpotSummary);
+router.post('/onspot/feedback', onSpotController.createCompanyFeedback);
+router.get('/onspot/feedback', onSpotController.getAllFeedback);
+router.delete('/onspot/feedback/:id', onSpotController.deleteCompanyFeedback);
+router.get('/onspot/analytics', onSpotController.getOnSpotAnalytics);
+
+router.post('/onspot/verify-feedback-token', onSpotController.verifyFeedbackToken);
+
 module.exports = router;
