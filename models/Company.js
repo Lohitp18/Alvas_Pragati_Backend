@@ -120,7 +120,15 @@ const CompanySchema = new mongoose.Schema({
   selectedPdf: {
     type: String,
     default: ''
+  },
+  password: {
+    type: String,
+    default: ''
   }
 }, { timestamps: true });
+
+CompanySchema.index({ createdAt: -1 });
+CompanySchema.index({ status: 1 });
+CompanySchema.index({ status: 1, companyName: 1 });
 
 module.exports = mongoose.model('Company', CompanySchema);

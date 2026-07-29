@@ -77,7 +77,15 @@ const CandidateSchema = new mongoose.Schema({
   registrationData: {
     type: mongoose.Schema.Types.Mixed,
     default: {}
+  },
+  registration_sms_sent: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
+
+CandidateSchema.index({ createdAt: -1 });
+CandidateSchema.index({ status: 1 });
+CandidateSchema.index({ status: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Candidate', CandidateSchema);

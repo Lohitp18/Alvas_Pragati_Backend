@@ -6,18 +6,29 @@ const CompanyFeedback = require('../models/CompanyFeedback');
 // Company login for On Spot Portal
 exports.onSpotCompanyLogin = async (req, res) => {
   try {
-    const { companyName } = req.body;
-    if (!companyName) {
-      return res.status(400).json({ message: 'Company name is required' });
+    const { companyName, password } = req.body;
+    if (!companyName || !password) {
+      return res.status(400).json({ message: 'Company name/email and password are required' });
     }
 
+    const trimmed = companyName.trim();
     const company = await Company.findOne({
-      companyName: { $regex: new RegExp(`^${companyName.trim()}$`, 'i') },
+      $or: [
+        { companyName: { $regex: new RegExp(`^${trimmed}$`, 'i') } },
+        { email: trimmed.toLowerCase() }
+      ],
       status: 'Approved'
     });
 
     if (!company) {
       return res.status(401).json({ message: 'Company not found or not approved' });
+    }
+
+    // Verify password
+    // Fallback: If company has no password set, use companyName as fallback
+    const expectedPassword = company.password || company.companyName;
+    if (password.trim() !== expectedPassword.trim()) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     res.status(200).json({
@@ -314,6 +325,113 @@ exports.verifyFeedbackToken = async (req, res) => {
     return res.status(401).json({ success: false, message: 'Invalid access token' });
   } catch (error) {
     console.error('Error verifying token:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Register multiple students for a company on-spot (batch)
+exports.registerOnSpotStudentsBatch = async (req, res) => {
+  try {
+    const { companyId, companyName, selections } = req.body; // selections is [{ candidateId, status }]
+
+    if (!companyId || !companyName || !Array.isArray(selections)) {
+      return res.status(400).json({ message: 'Company details and selections array are required' });
+    }
+
+    const companyDoc = await Company.findById(companyId);
+    const companySector = companyDoc ? companyDoc.industry || 'Unknown' : 'Unknown';
+
+    const results = [];
+    const errors = [];
+
+    for (const item of selections) {
+      const { candidateId, status } = item;
+      if (!candidateId || !status) continue;
+
+      try {
+        // Check if candidate exists
+        const candidate = await Candidate.findById(candidateId);
+        if (!candidate) {
+          errors.push({ candidateId, message: 'Candidate not found' });
+          continue;
+        }
+
+        // Check if already registered for this company
+        const existing = await OnSpotRegistration.findOne({ companyId, candidateId });
+        if (existing) {
+          // Update status if it changed
+          if (existing.status !== status) {
+            existing.status = status;
+            await existing.save();
+            results.push(existing);
+          } else {
+            results.push(existing);
+          }
+          continue;
+        }
+
+        const registration = new OnSpotRegistration({
+          companyId,
+          companyName,
+          candidateId,
+          serialNumber: candidate.serialNumber,
+          fullName: candidate.fullName,
+          email: candidate.email,
+          phone: candidate.phone,
+          college: candidate.college,
+          degree: candidate.degree,
+          status,
+          companySector
+        });
+
+        await registration.save();
+        results.push(registration);
+      } catch (err) {
+        errors.push({ candidateId, message: err.message });
+      }
+    }
+
+    res.status(200).json({
+      message: `Batch registration processed. Success: ${results.length}, Failed: ${errors.length}`,
+      results,
+      errors
+    });
+  } catch (error) {
+    console.error('Error in batch registration:', error);
+    res.status(500).json({ message: 'Server error during batch registration', error: error.message });
+  }
+};
+
+// Get selection status for a candidate (by serialNumber, email, or phone)
+exports.getCandidateSelections = async (req, res) => {
+  try {
+    const { uniqueId } = req.params;
+    if (!uniqueId) {
+      return res.status(400).json({ message: 'Candidate unique ID is required' });
+    }
+    const cleanedId = uniqueId.trim();
+    
+    // Find candidate first to get their profile
+    const candidate = await Candidate.findOne({
+      $or: [
+        { serialNumber: cleanedId },
+        { email: cleanedId.toLowerCase() },
+        { phone: cleanedId }
+      ]
+    });
+    
+    if (!candidate) {
+      return res.status(404).json({ message: 'Candidate not found' });
+    }
+    
+    // Find all selections/shortlists for this candidate
+    const selections = await OnSpotRegistration.find({ candidateId: candidate._id }).sort({ createdAt: -1 }).lean();
+    res.status(200).json({
+      candidate,
+      selections
+    });
+  } catch (error) {
+    console.error('Error fetching candidate selections:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

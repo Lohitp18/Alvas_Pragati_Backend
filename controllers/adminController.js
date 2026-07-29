@@ -2,6 +2,7 @@ const Candidate = require('../models/Candidate');
 const Company = require('../models/Company');
 const { normalizeOpeningSpecialization } = require('../utils/specialization');
 const AdminCredential = require('../models/AdminCredential');
+const SectorQualLink = require('../models/SectorQualLink');
 
 // Admin Login
 // Admin Login
@@ -58,7 +59,30 @@ exports.adminLogin = async (req, res) => {
 // Get all candidates
 exports.getAllCandidates = async (req, res) => {
   try {
-    const candidates = await Candidate.find().sort({ createdAt: -1 });
+    const { status, page, limit } = req.query;
+    const filter = {};
+    
+    if (status === 'Registered') {
+      filter.$or = [
+        { status: 'Registered' },
+        { status: { $exists: false } },
+        { status: null },
+        { status: '' }
+      ];
+    } else if (status) {
+      filter.status = status;
+    }
+
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+
+    let query = Candidate.find(filter).sort({ createdAt: -1 });
+    if (pageNum && limitNum) {
+      const skipNum = (pageNum - 1) * limitNum;
+      query = query.skip(skipNum).limit(limitNum);
+    }
+
+    const candidates = await query.lean();
     res.status(200).json(candidates);
   } catch (error) {
     console.error('Error fetching candidates:', error);
@@ -69,7 +93,23 @@ exports.getAllCandidates = async (req, res) => {
 // Get all companies
 exports.getAllCompanies = async (req, res) => {
   try {
-    const companies = await Company.find().sort({ createdAt: -1 });
+    const { status, page, limit } = req.query;
+    const filter = {};
+    
+    if (status) {
+      filter.status = status;
+    }
+
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+
+    let query = Company.find(filter).sort({ createdAt: -1 });
+    if (pageNum && limitNum) {
+      const skipNum = (pageNum - 1) * limitNum;
+      query = query.skip(skipNum).limit(limitNum);
+    }
+
+    const companies = await query.lean();
     res.status(200).json(companies);
   } catch (error) {
     console.error('Error fetching companies:', error);
@@ -110,6 +150,7 @@ exports.updateCompany = async (req, res) => {
       'industry', 'requirements', 'executives', 'accommodation',
       'transportation', 'interviewProcess', 'openings', 'status',
       'shortlistedCount', 'selectedCount', 'shortlistedPdf', 'selectedPdf',
+      'password'
     ];
 
     const updates = {};
@@ -293,6 +334,81 @@ exports.getAuditLogs = async (req, res) => {
     res.status(200).json(logs);
   } catch (error) {
     console.error('Error fetching audit logs:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Get Sector and Qualification links
+exports.getSectorQualLinks = async (req, res) => {
+  try {
+    const approvedCompanies = await Company.find({ status: 'Approved' });
+    
+    // Extract sectors
+    const sectorsSet = new Set();
+    approvedCompanies.forEach(c => {
+      if (c.industry) sectorsSet.add(c.industry.trim());
+    });
+    const sectorsList = Array.from(sectorsSet).sort();
+
+    // Extract qualifications
+    const qualsSet = new Set();
+    approvedCompanies.forEach(c => {
+      c.openings?.forEach(op => {
+        const quals = Array.isArray(op.qualification) 
+          ? op.qualification 
+          : (op.qualification ? [op.qualification] : []);
+        quals.forEach(q => {
+          if (q) qualsSet.add(q.trim());
+        });
+      });
+    });
+    const qualsList = Array.from(qualsSet).sort();
+
+    // Fetch existing links from DB
+    const savedLinks = await SectorQualLink.find({});
+    const linksMap = {};
+    savedLinks.forEach(l => {
+      linksMap[`${l.type}:${l.name}`] = l.link;
+    });
+
+    // Combine lists with links
+    const sectors = sectorsList.map(name => ({
+      name,
+      link: linksMap[`sector:${name}`] || ''
+    }));
+
+    const qualifications = qualsList.map(name => ({
+      name,
+      link: linksMap[`qualification:${name}`] || ''
+    }));
+
+    res.status(200).json({ sectors, qualifications });
+  } catch (error) {
+    console.error('Error fetching sector and qualification links:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Save or update a Sector or Qualification link
+exports.saveSectorQualLink = async (req, res) => {
+  try {
+    const { name, type, link } = req.body;
+    if (!name || !type) {
+      return res.status(400).json({ message: 'Name and type are required' });
+    }
+    if (!['sector', 'qualification'].includes(type)) {
+      return res.status(400).json({ message: 'Invalid type. Must be sector or qualification' });
+    }
+
+    const doc = await SectorQualLink.findOneAndUpdate(
+      { name, type },
+      { name, type, link: link || '' },
+      { new: true, upsert: true }
+    );
+
+    res.status(200).json({ message: 'Link saved successfully', doc });
+  } catch (error) {
+    console.error('Error saving sector/qualification link:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

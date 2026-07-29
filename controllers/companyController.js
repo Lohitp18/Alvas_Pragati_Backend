@@ -62,10 +62,20 @@ exports.registerCompany = async (req, res) => {
 // Get all approved companies (public)
 exports.getApprovedCompanies = async (req, res) => {
   try {
-    const companies = await Company.find({ status: 'Approved' })
+    const { page, limit } = req.query;
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+
+    let query = Company.find({ status: 'Approved' })
       .select('companyName industry openings')
       .sort({ companyName: 1 });
 
+    if (pageNum && limitNum) {
+      const skipNum = (pageNum - 1) * limitNum;
+      query = query.skip(skipNum).limit(limitNum);
+    }
+
+    const companies = await query.lean();
     res.status(200).json(companies);
   } catch (error) {
     console.error('Error fetching approved companies:', error);

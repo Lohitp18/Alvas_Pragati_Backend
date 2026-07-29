@@ -52,6 +52,10 @@ router.get('/credentials', adminController.getAllCredentials);
 router.post('/credentials', adminController.createCredential);
 router.delete('/credentials/:id', adminController.deleteCredential);
 
+// Sector and Qualification Links
+router.get('/sector-qual-links', adminController.getSectorQualLinks);
+router.post('/sector-qual-links', adminController.saveSectorQualLink);
+
 // Audit logs
 router.get('/audit-logs', adminController.getAuditLogs);
 
@@ -60,6 +64,8 @@ const onSpotController = require('../controllers/onSpotController');
 router.post('/onspot/login', onSpotController.onSpotCompanyLogin);
 router.get('/onspot/query-student/:uniqueId', onSpotController.queryStudentByUniqueId);
 router.post('/onspot/register', onSpotController.registerOnSpotStudent);
+router.post('/onspot/register-batch', onSpotController.registerOnSpotStudentsBatch);
+router.get('/onspot/candidate/:uniqueId', onSpotController.getCandidateSelections);
 router.get('/onspot/company/:companyId', onSpotController.getCompanyOnSpotStudents);
 router.put('/onspot/:id', onSpotController.updateOnSpotStudent);
 router.delete('/onspot/:id', onSpotController.deleteOnSpotStudent);

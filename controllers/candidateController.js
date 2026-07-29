@@ -79,13 +79,16 @@ exports.registerCandidate = async (req, res) => {
       fullName,
       serialNumber: newCandidate.serialNumber,
     })
-      .then((smsResult) => {
+      .then(async (smsResult) => {
         console.log('[Registration] Background DOSNET SMS result:', {
           sent: smsResult.sent,
           skipped: smsResult.skipped,
           error: smsResult.error || null,
           variables: smsResult.variables || null,
         });
+        if (smsResult.sent) {
+          await Candidate.findByIdAndUpdate(newCandidate._id, { registration_sms_sent: true });
+        }
       })
       .catch((err) => {
         console.error('[Registration] Background DOSNET SMS error:', err.message);

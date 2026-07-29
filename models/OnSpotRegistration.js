@@ -52,5 +52,7 @@ const OnSpotRegistrationSchema = new mongoose.Schema({
 
 // Avoid duplicate registration of same student to same company
 OnSpotRegistrationSchema.index({ companyId: 1, candidateId: 1 }, { unique: true });
+OnSpotRegistrationSchema.index({ companyId: 1, createdAt: -1 });
+OnSpotRegistrationSchema.index({ candidateId: 1 });
 
 module.exports = mongoose.model('OnSpotRegistration', OnSpotRegistrationSchema);
