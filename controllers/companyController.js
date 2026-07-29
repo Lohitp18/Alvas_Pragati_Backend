@@ -63,6 +63,11 @@ exports.registerCompany = async (req, res) => {
 exports.getApprovedCompanies = async (req, res) => {
   try {
     const { page, limit } = req.query;
+
+    const totalCount = await Company.countDocuments({ status: 'Approved' });
+    res.set('X-Total-Count', totalCount);
+    res.set('Access-Control-Expose-Headers', 'X-Total-Count');
+
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
 

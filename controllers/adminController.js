@@ -73,6 +73,10 @@ exports.getAllCandidates = async (req, res) => {
       filter.status = status;
     }
 
+    const totalCount = await Candidate.countDocuments(filter);
+    res.set('X-Total-Count', totalCount);
+    res.set('Access-Control-Expose-Headers', 'X-Total-Count');
+
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
 
@@ -99,6 +103,10 @@ exports.getAllCompanies = async (req, res) => {
     if (status) {
       filter.status = status;
     }
+
+    const totalCount = await Company.countDocuments(filter);
+    res.set('X-Total-Count', totalCount);
+    res.set('Access-Control-Expose-Headers', 'X-Total-Count');
 
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
