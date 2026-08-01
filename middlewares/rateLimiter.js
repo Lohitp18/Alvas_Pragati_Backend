@@ -8,6 +8,10 @@ const FORM_LIMIT = 10;
 const FORM_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
 exports.generalRateLimiter = (req, res, next) => {
+  if (req.path === '/api/admin/signin' || req.path === '/signin' || req.originalUrl === '/api/admin/signin') {
+    return next();
+  }
+
   const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   const now = Date.now();
 

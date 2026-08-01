@@ -8,6 +8,10 @@ let isBlocked = false;
 let blockedUntil = 0;
 
 module.exports = (req, res, next) => {
+  if (req.path === '/api/admin/signin' || req.path === '/signin' || req.originalUrl === '/api/admin/signin') {
+    return next();
+  }
+
   const now = Date.now();
 
   // Check if currently blocked

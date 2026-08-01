@@ -16,8 +16,8 @@ const spotRoles = authorizeRoles('super admin', 'sector head', 'company');
 
 // @route   POST /api/admin/signin
 // @desc    Admin login
-// @access  Public (Rate-limited)
-router.post('/signin', formRateLimiter, adminController.adminLogin);
+// @access  Public
+router.post('/signin', adminController.adminLogin);
 
 // @route   GET /api/admin/candidates
 // @desc    Get all registered candidates
