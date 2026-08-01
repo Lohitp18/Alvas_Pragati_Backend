@@ -41,7 +41,7 @@ const OnSpotRegistrationSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Shortlisted', 'Selected'],
+    enum: ['Shortlisted', 'Selected', 'Appeared'],
     required: true
   },
   companySector: {

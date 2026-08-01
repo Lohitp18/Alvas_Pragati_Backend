@@ -3,6 +3,7 @@ const Company = require('../models/Company');
 const { normalizeOpeningSpecialization } = require('../utils/specialization');
 const AdminCredential = require('../models/AdminCredential');
 const SectorQualLink = require('../models/SectorQualLink');
+const jwt = require('jsonwebtoken');
 
 // Admin Login
 // Admin Login
@@ -40,10 +41,23 @@ exports.adminLogin = async (req, res) => {
       console.error('Failed to write audit log:', auditErr);
     }
     
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        id: admin._id,
+        username: admin.username,
+        role: admin.role || 'super admin',
+        allowedTabs: admin.allowedTabs || []
+      },
+      process.env.JWT_SECRET || 'change-this-secret',
+      { expiresIn: '24h' }
+    );
+
     // If login successful, return success message
     res.status(200).json({ 
       message: 'Login successful', 
       success: true,
+      token,
       username: admin.username,
       name: admin.name || admin.username,
       email: admin.email || '',

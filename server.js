@@ -24,6 +24,15 @@ const { isSmsConfigured, getDosnetConfig, getMissingDosnetVars } = require('./se
 
 const app = express();
 
+// Global Security & Stability Middlewares
+const overloadProtection = require('./middlewares/overloadProtection');
+const { generalRateLimiter } = require('./middlewares/rateLimiter');
+const { cacheInvalidator } = require('./middlewares/cacheMiddleware');
+
+app.use(overloadProtection);
+app.use(generalRateLimiter);
+app.use(cacheInvalidator);
+
 // Middlewares
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,https://alvaspragati.com,https://www.alvaspragati.com')
   .split(',')
@@ -52,6 +61,17 @@ app.use(express.static('public'));
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/alvas-pragati')
   .then(() => console.log('MongoDB connected successfully'))
   .catch((err) => console.error('MongoDB connection error:', err));
+
+// Database connection check middleware
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api') && mongoose.connection.readyState !== 1) {
+    console.warn(`[DB Connection Check] Mongoose connection not ready. State: ${mongoose.connection.readyState}`);
+    return res.status(503).json({
+      message: 'Database connection is initializing. Please try again in a few seconds.'
+    });
+  }
+  next();
+});
 
 // Define Routes
 app.use('/api/candidates', require('./routes/candidateRoutes'));

@@ -2,6 +2,7 @@ const Company = require('../models/Company');
 const Candidate = require('../models/Candidate');
 const OnSpotRegistration = require('../models/OnSpotRegistration');
 const CompanyFeedback = require('../models/CompanyFeedback');
+const jwt = require('jsonwebtoken');
 
 // Company login for On Spot Portal
 exports.onSpotCompanyLogin = async (req, res) => {
@@ -31,8 +32,20 @@ exports.onSpotCompanyLogin = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    // Generate JWT for company
+    const token = jwt.sign(
+      {
+        id: company._id,
+        companyName: company.companyName,
+        role: 'company'
+      },
+      process.env.JWT_SECRET || 'change-this-secret',
+      { expiresIn: '24h' }
+    );
+
     res.status(200).json({
       message: 'Login successful',
+      token,
       company: {
         _id: company._id,
         companyName: company.companyName
@@ -141,7 +154,7 @@ exports.updateOnSpotStudent = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!status || !['Shortlisted', 'Selected'].includes(status)) {
+    if (!status || !['Shortlisted', 'Selected', 'Appeared'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
     }
 

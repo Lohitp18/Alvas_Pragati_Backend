@@ -2,15 +2,17 @@ const express = require('express');
 const router = express.Router();
 const companyController = require('../controllers/companyController');
 const { validateCompanyRegistration, checkValidationErrors } = require('../middlewares/validationMiddleware');
+const { formRateLimiter } = require('../middlewares/rateLimiter');
+const { cacheMiddleware } = require('../middlewares/cacheMiddleware');
 
 // @route   POST /api/companies/register
 // @desc    Register a new company
 // @access  Public
-router.post('/register', validateCompanyRegistration, checkValidationErrors, companyController.registerCompany);
+router.post('/register', formRateLimiter, validateCompanyRegistration, checkValidationErrors, companyController.registerCompany);
 
 // @route   GET /api/companies/approved
 // @desc    Get all approved participating companies
-// @access  Public
-router.get('/approved', companyController.getApprovedCompanies);
+// @access  Public (Cached)
+router.get('/approved', cacheMiddleware(60), companyController.getApprovedCompanies);
 
 module.exports = router;
