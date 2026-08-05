@@ -365,15 +365,15 @@ exports.getSectorQualLinks = async (req, res) => {
   try {
     const approvedCompanies = await Company.find({ status: 'Approved' });
     
-    // Extract sectors
-    const sectorsSet = new Set();
+    // Extract sectors starting with predefined list
+    const sectorsSet = new Set(SectorQualLink.PREDEFINED_SECTORS || []);
     approvedCompanies.forEach(c => {
       if (c.industry) sectorsSet.add(c.industry.trim());
     });
-    const sectorsList = Array.from(sectorsSet).sort();
+    const sectorsList = Array.from(sectorsSet);
 
-    // Extract qualifications
-    const qualsSet = new Set();
+    // Extract qualifications starting with predefined list
+    const qualsSet = new Set(SectorQualLink.PREDEFINED_QUALIFICATIONS || []);
     approvedCompanies.forEach(c => {
       c.openings?.forEach(op => {
         const quals = Array.isArray(op.qualification) 
@@ -384,7 +384,7 @@ exports.getSectorQualLinks = async (req, res) => {
         });
       });
     });
-    const qualsList = Array.from(qualsSet).sort();
+    const qualsList = Array.from(qualsSet);
 
     // Fetch existing links from DB
     const savedLinks = await SectorQualLink.find({});

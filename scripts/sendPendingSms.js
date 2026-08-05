@@ -43,17 +43,24 @@ async function runSmsUrlReport() {
 
     const smsUrls = [];
 
+    // Start registration number from 002601
+    let nextSerialNumber = 2601;
+
     for (let i = 0; i < candidates.length; i++) {
-      const { fullName, phone, serialNumber } = candidates[i];
+      const { fullName, phone } = candidates[i];
 
       console.log(
         `[${i + 1}/${candidates.length}] ${fullName} (${phone})`
       );
 
-      if (!phone || !serialNumber) {
-        console.log("Skipping...");
+      if (!phone) {
+        console.log("Skipping - Missing phone number.");
         continue;
       }
+
+      // Generate registration number
+      const serialNumber = String(nextSerialNumber).padStart(6, "0");
+      nextSerialNumber++;
 
       const message =
         `Dear ${fullName}, ` +
@@ -76,22 +83,28 @@ async function runSmsUrlReport() {
 
       smsUrls.push(smsUrl);
 
-      console.log("✓ URL Generated");
+      console.log(`✓ URL Generated (${serialNumber})`);
     }
 
     const reportPath = path.join(__dirname, "sms_urls_report.txt");
 
-    // Store only URLs separated by commas
-fs.writeFileSync(
-  reportPath,
-  smsUrls.map(url => `"${url}"`).join(",\n"),
-  "utf8"
-);
+    // Save only URLs enclosed in double quotes and separated by commas
+    fs.writeFileSync(
+      reportPath,
+      smsUrls.map(url => `"${url}"`).join(",\n"),
+      "utf8"
+    );
+
     console.log("\n====================================================");
     console.log("Report Generated Successfully");
     console.log(`Total URLs : ${smsUrls.length}`);
-    console.log(`Saved To   : ${reportPath}`);
+    console.log(`Starting Registration No : 002601`);
+    console.log(
+      `Ending Registration No   : ${String(nextSerialNumber - 1).padStart(6, "0")}`
+    );
+    console.log(`Saved To : ${reportPath}`);
     console.log("====================================================");
+
   } catch (err) {
     console.error(err);
   } finally {

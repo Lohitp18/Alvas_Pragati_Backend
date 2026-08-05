@@ -25,12 +25,8 @@ const { isSmsConfigured, getDosnetConfig, getMissingDosnetVars } = require('./se
 const app = express();
 
 // Global Security & Stability Middlewares
-const overloadProtection = require('./middlewares/overloadProtection');
-const { generalRateLimiter } = require('./middlewares/rateLimiter');
 const { cacheInvalidator } = require('./middlewares/cacheMiddleware');
 
-app.use(overloadProtection);
-app.use(generalRateLimiter);
 app.use(cacheInvalidator);
 
 // Middlewares

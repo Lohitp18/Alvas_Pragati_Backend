@@ -6,7 +6,6 @@ const onSpotController = require('../controllers/onSpotController');
 // Middlewares
 const authMiddleware = require('../middlewares/authMiddleware');
 const { authorizeRoles } = require('../middlewares/roleMiddleware');
-const { formRateLimiter } = require('../middlewares/rateLimiter');
 const { cacheMiddleware } = require('../middlewares/cacheMiddleware');
 const auditLogger = require('../middlewares/auditLogger');
 
@@ -72,7 +71,7 @@ router.post('/sector-qual-links', authMiddleware, adminRoles, auditLogger, admin
 router.get('/audit-logs', authMiddleware, adminRoles, auditLogger, cacheMiddleware(10), adminController.getAuditLogs);
 
 // On Spot Registration routes
-router.post('/onspot/login', formRateLimiter, onSpotController.onSpotCompanyLogin);
+router.post('/onspot/login', onSpotController.onSpotCompanyLogin);
 router.get('/onspot/query-student/:uniqueId', authMiddleware, spotRoles, auditLogger, onSpotController.queryStudentByUniqueId);
 router.post('/onspot/register', authMiddleware, spotRoles, auditLogger, onSpotController.registerOnSpotStudent);
 router.post('/onspot/register-batch', authMiddleware, spotRoles, auditLogger, onSpotController.registerOnSpotStudentsBatch);
@@ -86,8 +85,8 @@ router.get('/onspot/summary', authMiddleware, spotRoles, auditLogger, cacheMiddl
 router.get('/onspot/analytics', authMiddleware, spotRoles, auditLogger, cacheMiddleware(10), onSpotController.getOnSpotAnalytics);
 
 // Feedback submissions (Public, rate-limited)
-router.post('/onspot/feedback', formRateLimiter, onSpotController.createCompanyFeedback);
-router.post('/onspot/verify-feedback-token', formRateLimiter, onSpotController.verifyFeedbackToken);
+router.post('/onspot/feedback', onSpotController.createCompanyFeedback);
+router.post('/onspot/verify-feedback-token', onSpotController.verifyFeedbackToken);
 
 // Feedback retrieval & deletion (Admin Only)
 router.get('/onspot/feedback', authMiddleware, adminRoles, auditLogger, cacheMiddleware(15), onSpotController.getAllFeedback);
