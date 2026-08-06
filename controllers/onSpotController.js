@@ -200,20 +200,43 @@ exports.getOnSpotSummary = async (req, res) => {
   try {
     const companies = await Company.find({ status: 'Approved' }).sort({ companyName: 1 });
     const registrations = await OnSpotRegistration.aggregate([
-      { $group: { _id: '$companyId', count: { $sum: 1 } } }
+      {
+        $group: {
+          _id: '$companyId',
+          count: { $sum: 1 },
+          shortlistedCount: {
+            $sum: { $cond: [{ $eq: ['$status', 'Shortlisted'] }, 1, 0] }
+          },
+          selectedCount: {
+            $sum: { $cond: [{ $eq: ['$status', 'Selected'] }, 1, 0] }
+          }
+        }
+      }
     ]);
 
     const countsMap = {};
     registrations.forEach(r => {
-      countsMap[r._id.toString()] = r.count;
+      countsMap[r._id.toString()] = {
+        count: r.count,
+        shortlistedCount: r.shortlistedCount,
+        selectedCount: r.selectedCount
+      };
     });
 
-    const summary = companies.map(c => ({
-      _id: c._id,
-      companyName: c.companyName,
-      industry: c.industry,
-      studentCount: countsMap[c._id.toString()] || 0
-    }));
+    const summary = companies.map(c => {
+      const qualifications = Array.from(new Set(
+        (c.openings || []).flatMap(op => op.qualification || [])
+      ));
+      return {
+        _id: c._id,
+        companyName: c.companyName,
+        industry: c.industry,
+        qualifications,
+        studentCount: countsMap[c._id.toString()]?.count || 0,
+        shortlistedCount: countsMap[c._id.toString()]?.shortlistedCount || 0,
+        selectedCount: countsMap[c._id.toString()]?.selectedCount || 0
+      };
+    });
 
     res.status(200).json(summary);
   } catch (error) {
@@ -280,7 +303,9 @@ exports.createCompanyFeedback = async (req, res) => {
 // Get all logged company feedback
 exports.getAllFeedback = async (req, res) => {
   try {
-    const feedbackList = await CompanyFeedback.find({}).sort({ createdAt: -1 });
+    const feedbackList = await CompanyFeedback.find({})
+      .populate('companyId', 'openings industry')
+      .sort({ createdAt: -1 });
     res.status(200).json(feedbackList);
   } catch (error) {
     console.error('Error getting feedback:', error);
