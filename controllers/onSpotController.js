@@ -357,7 +357,7 @@ exports.getOnSpotAnalytics = async (req, res) => {
 exports.verifyFeedbackToken = async (req, res) => {
   try {
     const { token } = req.body;
-    if (token === '636293') {
+    if (token === '696293') {
       return res.status(200).json({ success: true, message: 'Access granted' });
     }
     return res.status(401).json({ success: false, message: 'Invalid access token' });
