@@ -172,7 +172,7 @@ exports.updateCompany = async (req, res) => {
       'industry', 'requirements', 'executives', 'accommodation',
       'transportation', 'interviewProcess', 'openings', 'status',
       'shortlistedCount', 'selectedCount', 'shortlistedPdf', 'selectedPdf',
-      'password'
+      'password', 'showResults'
     ];
 
     const updates = {};
@@ -192,7 +192,7 @@ exports.updateCompany = async (req, res) => {
       updates.requirements = String(updates.requirements || '').trim();
     }
 
-    const company = await Company.findByIdAndUpdate(id, updates, { new: true, runValidators: true });
+    const company = await Company.findByIdAndUpdate(id, updates, { returnDocument: 'after', runValidators: true });
     if (!company) {
       return res.status(404).json({ message: 'Company not found' });
     }
@@ -214,7 +214,7 @@ exports.updateCompanyStatus = async (req, res) => {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
-    const company = await Company.findByIdAndUpdate(id, { status }, { new: true });
+    const company = await Company.findByIdAndUpdate(id, { status }, { returnDocument: 'after' });
     if (!company) {
       return res.status(404).json({ message: 'Company not found' });
     }
@@ -236,7 +236,7 @@ exports.updateCandidateStatus = async (req, res) => {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
-    const candidate = await Candidate.findByIdAndUpdate(id, { status }, { new: true });
+    const candidate = await Candidate.findByIdAndUpdate(id, { status }, { returnDocument: 'after' });
     if (!candidate) {
       return res.status(404).json({ message: 'Candidate not found' });
     }
@@ -425,7 +425,7 @@ exports.saveSectorQualLink = async (req, res) => {
     const doc = await SectorQualLink.findOneAndUpdate(
       { name, type },
       { name, type, link: link || '' },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
 
     res.status(200).json({ message: 'Link saved successfully', doc });

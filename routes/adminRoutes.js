@@ -74,6 +74,7 @@ router.get('/audit-logs', authMiddleware, adminRoles, auditLogger, cacheMiddlewa
 router.post('/onspot/login', onSpotController.onSpotCompanyLogin);
 router.get('/onspot/query-student/:uniqueId', authMiddleware, spotRoles, auditLogger, onSpotController.queryStudentByUniqueId);
 router.post('/onspot/register', authMiddleware, spotRoles, auditLogger, onSpotController.registerOnSpotStudent);
+router.post('/onspot/register-with-data', authMiddleware, spotRoles, auditLogger, onSpotController.registerOnSpotStudentWithData);
 router.post('/onspot/register-batch', authMiddleware, spotRoles, auditLogger, onSpotController.registerOnSpotStudentsBatch);
 router.get('/onspot/candidate/:uniqueId', authMiddleware, spotRoles, auditLogger, onSpotController.getCandidateSelections);
 router.get('/onspot/company/:companyId', authMiddleware, spotRoles, auditLogger, onSpotController.getCompanyOnSpotStudents);

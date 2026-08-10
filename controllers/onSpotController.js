@@ -161,7 +161,7 @@ exports.updateOnSpotStudent = async (req, res) => {
     const registration = await OnSpotRegistration.findByIdAndUpdate(
       id,
       { status },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!registration) {
@@ -234,7 +234,8 @@ exports.getOnSpotSummary = async (req, res) => {
         qualifications,
         studentCount: countsMap[c._id.toString()]?.count || 0,
         shortlistedCount: countsMap[c._id.toString()]?.shortlistedCount || 0,
-        selectedCount: countsMap[c._id.toString()]?.selectedCount || 0
+        selectedCount: countsMap[c._id.toString()]?.selectedCount || 0,
+        showResults: c.showResults || false
       };
     });
 
@@ -470,6 +471,86 @@ exports.getCandidateSelections = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching candidate selections:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Register a student for a company on-spot with manual candidate data
+exports.registerOnSpotStudentWithData = async (req, res) => {
+  try {
+    const { companyId, companyName, serialNumber, fullName, email, phone, status } = req.body;
+
+    if (!companyId || !companyName || !serialNumber || !fullName || !email || !phone || !status) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    const cleanedSerialNumber = serialNumber.trim().toUpperCase();
+    const cleanedEmail = email.trim().toLowerCase();
+    const cleanedPhone = phone.trim();
+
+    let candidate = await Candidate.findOne({
+      $or: [
+        { serialNumber: cleanedSerialNumber },
+        { email: cleanedEmail },
+        { phone: cleanedPhone }
+      ]
+    });
+
+    if (!candidate) {
+      // Create new candidate
+      candidate = new Candidate({
+        fullName: fullName.trim(),
+        email: cleanedEmail,
+        phone: cleanedPhone,
+        serialNumber: cleanedSerialNumber,
+        college: 'On-Spot Candidate',
+        degree: 'Other',
+        graduationYear: 2026,
+        status: 'Approved'
+      });
+      await candidate.save();
+    }
+
+    // Check if already registered for this company
+    const existing = await OnSpotRegistration.findOne({ companyId, candidateId: candidate._id });
+    if (existing) {
+      if (existing.status !== status) {
+        existing.status = status;
+        await existing.save();
+        return res.status(200).json({
+          message: 'Status updated successfully',
+          registration: existing
+        });
+      }
+      return res.status(400).json({ message: 'This candidate is already registered for your company' });
+    }
+
+    // Fetch company sector
+    const companyDoc = await Company.findById(companyId);
+    const companySector = companyDoc ? companyDoc.industry || 'Unknown' : 'Unknown';
+
+    const registration = new OnSpotRegistration({
+      companyId,
+      companyName,
+      candidateId: candidate._id,
+      serialNumber: candidate.serialNumber,
+      fullName: candidate.fullName,
+      email: candidate.email,
+      phone: candidate.phone,
+      college: candidate.college,
+      degree: candidate.degree,
+      status,
+      companySector
+    });
+
+    await registration.save();
+
+    res.status(201).json({
+      message: 'Student registered successfully',
+      registration
+    });
+  } catch (error) {
+    console.error('Error registering student on-spot with data:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

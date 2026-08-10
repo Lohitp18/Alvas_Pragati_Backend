@@ -52,6 +52,10 @@ const CompanySchema = new mongoose.Schema({
     enum: ['Registered', 'Approved', 'Rejected'],
     default: 'Registered'
   },
+  showResults: {
+    type: Boolean,
+    default: false
+  },
   executives: [{
     name: String,
     designation: String,

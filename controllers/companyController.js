@@ -87,3 +87,62 @@ exports.getApprovedCompanies = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+// Get all approved company results (public)
+exports.getApprovedResults = async (req, res) => {
+  try {
+    const OnSpotRegistration = require('../models/OnSpotRegistration');
+    
+    // Find companies that are approved AND approved for results publication
+    const companies = await Company.find({ status: 'Approved', showResults: true })
+      .select('companyName industry openings')
+      .sort({ companyName: 1 })
+      .lean();
+
+    const companyIds = companies.map(c => c._id);
+
+    // Get all Selected & Shortlisted candidates for these companies
+    const registrations = await OnSpotRegistration.find({
+      companyId: { $in: companyIds },
+      status: { $in: ['Selected', 'Shortlisted'] }
+    }).sort({ fullName: 1 }).lean();
+
+    // Group registrations by companyId
+    const regsMap = {};
+    registrations.forEach(r => {
+      const cid = r.companyId.toString();
+      if (!regsMap[cid]) {
+        regsMap[cid] = [];
+      }
+      regsMap[cid].push({
+        _id: r._id,
+        fullName: r.fullName,
+        serialNumber: r.serialNumber,
+        email: r.email,
+        phone: r.phone,
+        status: r.status,
+        degree: r.degree,
+        college: r.college
+      });
+    });
+
+    const results = companies.map(c => {
+      const candidates = regsMap[c._id.toString()] || [];
+      const qualifications = Array.from(new Set(
+        (c.openings || []).flatMap(op => op.qualification || [])
+      ));
+      return {
+        _id: c._id,
+        companyName: c.companyName,
+        industry: c.industry,
+        qualifications,
+        candidates
+      };
+    });
+
+    res.status(200).json(results);
+  } catch (error) {
+    console.error('Error fetching approved results:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};

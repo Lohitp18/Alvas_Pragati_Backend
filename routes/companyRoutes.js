@@ -14,4 +14,9 @@ router.post('/register', validateCompanyRegistration, checkValidationErrors, com
 // @access  Public (Cached)
 router.get('/approved', cacheMiddleware(60), companyController.getApprovedCompanies);
 
+// @route   GET /api/companies/approved-results
+// @desc    Get all company results approved for publication
+// @access  Public (Cached)
+router.get('/approved-results', cacheMiddleware(30), companyController.getApprovedResults);
+
 module.exports = router;
