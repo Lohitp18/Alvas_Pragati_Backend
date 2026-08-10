@@ -209,6 +209,9 @@ exports.getOnSpotSummary = async (req, res) => {
           },
           selectedCount: {
             $sum: { $cond: [{ $eq: ['$status', 'Selected'] }, 1, 0] }
+          },
+          appearedCount: {
+            $sum: { $cond: [{ $eq: ['$status', 'Appeared'] }, 1, 0] }
           }
         }
       }
@@ -219,7 +222,8 @@ exports.getOnSpotSummary = async (req, res) => {
       countsMap[r._id.toString()] = {
         count: r.count,
         shortlistedCount: r.shortlistedCount,
-        selectedCount: r.selectedCount
+        selectedCount: r.selectedCount,
+        appearedCount: r.appearedCount || 0
       };
     });
 
@@ -235,6 +239,7 @@ exports.getOnSpotSummary = async (req, res) => {
         studentCount: countsMap[c._id.toString()]?.count || 0,
         shortlistedCount: countsMap[c._id.toString()]?.shortlistedCount || 0,
         selectedCount: countsMap[c._id.toString()]?.selectedCount || 0,
+        appearedCount: countsMap[c._id.toString()]?.appearedCount || 0,
         showResults: c.showResults || false
       };
     });
