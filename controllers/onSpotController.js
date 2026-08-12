@@ -485,27 +485,29 @@ exports.registerOnSpotStudentWithData = async (req, res) => {
   try {
     const { companyId, companyName, serialNumber, fullName, email, phone, status } = req.body;
 
-    if (!companyId || !companyName || !serialNumber || !fullName || !email || !phone || !status) {
-      return res.status(400).json({ message: 'All fields are required' });
+    if (!companyId || !companyName || !serialNumber || !fullName || !status) {
+      return res.status(400).json({ message: 'Company ID, Company Name, Unique ID, Student Name, and Status are required' });
     }
 
     const cleanedSerialNumber = serialNumber.trim().toUpperCase();
-    const cleanedEmail = email.trim().toLowerCase();
-    const cleanedPhone = phone.trim();
+    const cleanedEmail = email && email.trim()
+      ? email.trim().toLowerCase()
+      : `${cleanedSerialNumber.toLowerCase()}@dummy-alvaspragati.org`;
+    const cleanedPhone = phone && phone.trim() ? phone.trim() : '0000000000';
 
-    let candidate = await Candidate.findOne({
-      $or: [
-        { serialNumber: cleanedSerialNumber },
-        { email: cleanedEmail },
-        { phone: cleanedPhone }
-      ]
-    });
+    let candidate = await Candidate.findOne({ serialNumber: cleanedSerialNumber });
 
     if (!candidate) {
+      // Check if generated/provided email is already used by another candidate to prevent unique key error
+      const emailExists = await Candidate.findOne({ email: cleanedEmail });
+      const finalEmail = emailExists
+        ? `${cleanedSerialNumber.toLowerCase()}_${Date.now()}@dummy-alvaspragati.org`
+        : cleanedEmail;
+
       // Create new candidate
       candidate = new Candidate({
         fullName: fullName.trim(),
-        email: cleanedEmail,
+        email: finalEmail,
         phone: cleanedPhone,
         serialNumber: cleanedSerialNumber,
         college: 'On-Spot Candidate',
