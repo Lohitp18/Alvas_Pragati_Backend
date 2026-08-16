@@ -493,7 +493,7 @@ exports.registerOnSpotStudentWithData = async (req, res) => {
     const cleanedEmail = email && email.trim()
       ? email.trim().toLowerCase()
       : `${cleanedSerialNumber.toLowerCase()}@dummy-alvaspragati.org`;
-    const cleanedPhone = phone && phone.trim() ? phone.trim() : '0000000000';
+    const cleanedPhone = phone && phone.trim() ? phone.trim() : 'Not Available';
 
     let candidate = await Candidate.findOne({ serialNumber: cleanedSerialNumber });
 
