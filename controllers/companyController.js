@@ -118,11 +118,7 @@ exports.getApprovedResults = async (req, res) => {
         _id: r._id,
         fullName: r.fullName,
         serialNumber: r.serialNumber,
-        email: r.email,
-        phone: r.phone,
-        status: r.status,
-        degree: r.degree,
-        college: r.college
+        status: r.status
       });
     });
 
